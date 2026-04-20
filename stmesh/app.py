@@ -232,8 +232,7 @@ class MainWindow(QMainWindow):
     def __init__(self) -> None:
         super().__init__()
         self.setWindowTitle(f"{__app_name__} - AE Mesh Warp Preset Builder")
-        self.setMinimumSize(780, 780)
-        self.resize(900, 860)
+        self.setMinimumWidth(620)
 
         icon = _icon_path()
         if icon:
@@ -268,47 +267,48 @@ class MainWindow(QMainWindow):
         action_bar.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         root.addWidget(action_bar)
 
-        # Log card: hidden by default, toggled via the action bar.
-        # Expands to fill remaining space when visible.
+        # Log card: hidden by default, toggled from the status bar.
+        # Fixed vertical size so the window can snap back to a tight
+        # layout when it is hidden.
         self.log_card = self._build_log_card()
-        self.log_card.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.log_card.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         self.log_card.setVisible(False)
-        root.addWidget(self.log_card, 1)
-
-        # Push the status bar down when the log is hidden.
-        root.addStretch(0)
+        root.addWidget(self.log_card)
 
         # Status bar
         self.status = QStatusBar(self)
+        self.status.setSizeGripEnabled(False)
         self.setStatusBar(self.status)
+
+        # Small log toggle in the lower-left corner.
+        self.log_toggle = QPushButton("Show log")
+        self.log_toggle.setObjectName("statusToggle")
+        self.log_toggle.setCheckable(True)
+        self.log_toggle.setFlat(True)
+        self.log_toggle.setCursor(Qt.PointingHandCursor)
+        self.log_toggle.toggled.connect(self._on_toggle_log)
+        self.status.addWidget(self.log_toggle)
 
         self._wire_validation()
 
         self.setStyleSheet(theme.STYLE)
 
+        self._did_initial_fit = False
+
+    def showEvent(self, event) -> None:
+        super().showEvent(event)
+        if not self._did_initial_fit:
+            self._did_initial_fit = True
+            # Let layout compute its sizeHint with the log hidden, then
+            # snap the window to that size so there's no dead space
+            # below the action bar.
+            self.adjustSize()
+            self._collapsed_height = self.height()
+            self.setMinimumHeight(self._collapsed_height)
+
     # ---- Sections ----
 
-    def _build_header(self) -> QHBoxLayout:
-        row = QHBoxLayout()
-        row.setSpacing(14)
-        row.setContentsMargins(0, 0, 0, 0)
-
-        icon_px = 56
-        badge = QLabel()
-        badge.setObjectName("badge")
-        badge.setFixedSize(icon_px, icon_px)
-        badge.setAlignment(Qt.AlignCenter)
-        icon = _icon_path()
-        if icon:
-            pm = QPixmap(icon)
-            if not pm.isNull():
-                pm = pm.scaled(
-                    icon_px, icon_px,
-                    Qt.KeepAspectRatio, Qt.SmoothTransformation,
-                )
-                badge.setPixmap(pm)
-        row.addWidget(badge, 0, Qt.AlignVCenter)
-
+    def _build_header(self) -> QVBoxLayout:
         col = QVBoxLayout()
         col.setSpacing(2)
         col.setContentsMargins(0, 0, 0, 0)
@@ -318,15 +318,14 @@ class MainWindow(QMainWindow):
         col.addWidget(title)
 
         subtitle = QLabel(
-            "Build Adobe After Effects Mesh Warp .ffx presets from 32-bit "
+            "Build After Effects Mesh Warp .ffx presets from 32-bit "
             "STMap EXRs."
         )
         subtitle.setObjectName("subtitle")
         subtitle.setWordWrap(True)
         col.addWidget(subtitle)
 
-        row.addLayout(col, 1)
-        return row
+        return col
 
     def _build_shot_card(self) -> QFrame:
         card = _make_card()
@@ -409,17 +408,10 @@ class MainWindow(QMainWindow):
         self.progress = QProgressBar()
         self.progress.setRange(0, 0)  # indeterminate when visible
         self.progress.setVisible(False)
-        self.progress.setMaximumWidth(220)
+        self.progress.setMaximumWidth(200)
         row.addWidget(self.progress)
 
         row.addStretch(1)
-
-        self.log_toggle = QPushButton("Show log")
-        self.log_toggle.setObjectName("ghost")
-        self.log_toggle.setCheckable(True)
-        self.log_toggle.toggled.connect(self._on_toggle_log)
-        _size_control(self.log_toggle)
-        row.addWidget(self.log_toggle)
 
         self.reveal_btn = QPushButton("Open output folder")
         self.reveal_btn.setObjectName("ghost")
@@ -552,8 +544,20 @@ class MainWindow(QMainWindow):
         QMessageBox.critical(self, "Export failed", message)
 
     def _on_toggle_log(self, visible: bool) -> None:
-        self.log_card.setVisible(visible)
         self.log_toggle.setText("Hide log" if visible else "Show log")
+        # Resize the window so the log card appears / disappears in
+        # place, instead of leaving a gap or squeezing other cards.
+        log_h = self.log_card.sizeHint().height()
+        spacing = self.centralWidget().layout().spacing()
+        delta = log_h + spacing
+        if visible:
+            self.log_card.setVisible(True)
+            self.setMinimumHeight(self._collapsed_height + delta)
+            self.resize(self.width(), self._collapsed_height + delta)
+        else:
+            self.log_card.setVisible(False)
+            self.setMinimumHeight(self._collapsed_height)
+            self.resize(self.width(), self._collapsed_height)
 
     def _on_thread_cleanup(self) -> None:
         self._thread = None

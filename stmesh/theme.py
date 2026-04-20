@@ -220,4 +220,22 @@ QStatusBar {{
     color: {TEXT_DIM};
     border-top: 1px solid {BORDER};
 }}
+QStatusBar::item {{
+    border: none;
+}}
+
+QPushButton#statusToggle {{
+    background-color: transparent;
+    border: none;
+    color: {TEXT_MUTED};
+    padding: 2px 8px;
+    font-size: 11px;
+    min-height: 18px;
+}}
+QPushButton#statusToggle:hover {{
+    color: {TEXT_DIM};
+}}
+QPushButton#statusToggle:checked {{
+    color: {ACCENT};
+}}
 """
