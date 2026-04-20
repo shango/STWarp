@@ -1,13 +1,13 @@
 @echo off
 rem -------------------------------------------------------------------------
-rem STMesh — Windows build script
+rem STMesh - Windows build script
 rem
 rem Expected location when you run this: C:\Users\shann\Documents\STMesh
-rem (You sync the repo here after each commit, then run this file.)
+rem (Sync the repo here after each commit, then run this file.)
 rem
 rem What it does:
 rem   1. Creates a local .venv if missing
-rem   2. Installs/updates build requirements
+rem   2. Installs / updates build requirements
 rem   3. Runs PyInstaller using STMesh.spec
 rem   4. Leaves the final executable at dist\STMesh.exe
 rem
@@ -15,11 +15,11 @@ rem Run options:
 rem   build.bat           -> build
 rem   build.bat clean     -> wipe build / dist / __pycache__ first, then build
 rem   build.bat run       -> build, then launch dist\STMesh.exe
-rem   build.bat dev       -> skip build, just launch from source (no venv activate)
+rem   build.bat dev       -> skip build, just launch from source
 rem -------------------------------------------------------------------------
 setlocal EnableExtensions EnableDelayedExpansion
 
-rem Always work from the folder this .bat lives in — i.e. the repo root.
+rem Always work from the folder this .bat lives in, i.e. the repo root.
 pushd "%~dp0"
 
 set "MODE=%~1"
@@ -35,8 +35,7 @@ if %errorlevel%==0 (
     ) else (
         echo [ERROR] Python 3.10+ is required but was not found on PATH.
         echo         Install from https://www.python.org/downloads/ and retry.
-        popd
-        exit /b 1
+        goto :fail
     )
 )
 
@@ -65,7 +64,7 @@ if not exist "%VENV_PY%" (
 
 if /I "%MODE%"=="dev" (
     echo [dev] Launching from source (no build)...
-    "%VENV_PY%" -m pip install --upgrade pip >nul
+    "%VENV_PY%" -m pip install --upgrade pip
     "%VENV_PY%" -m pip install -r requirements.txt
     if errorlevel 1 goto :fail
     "%VENV_PY%" -m stmesh
@@ -73,7 +72,7 @@ if /I "%MODE%"=="dev" (
 )
 
 echo [3/4] Installing build requirements...
-"%VENV_PY%" -m pip install --upgrade pip >nul
+"%VENV_PY%" -m pip install --upgrade pip
 "%VENV_PY%" -m pip install -r requirements-build.txt
 if errorlevel 1 goto :fail
 
@@ -97,6 +96,8 @@ if /I "%MODE%"=="run" (
 :done
 popd
 endlocal
+echo.
+pause
 exit /b 0
 
 :fail
@@ -104,4 +105,6 @@ echo.
 echo Build FAILED. See messages above.
 popd
 endlocal
+echo.
+pause
 exit /b 1
