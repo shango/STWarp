@@ -217,8 +217,8 @@ class MainWindow(QMainWindow):
     def __init__(self) -> None:
         super().__init__()
         self.setWindowTitle(f"{__app_name__} - AE Mesh Warp Preset Builder")
-        self.setMinimumSize(720, 640)
-        self.resize(860, 760)
+        self.setMinimumSize(780, 880)
+        self.resize(900, 960)
 
         icon = _icon_path()
         if icon:
@@ -238,17 +238,25 @@ class MainWindow(QMainWindow):
         # Header
         root.addLayout(self._build_header())
 
-        # Shot + output card
-        root.addWidget(self._build_shot_card())
+        # Shot + output card (fixed height so its fields never get squashed)
+        shot_card = self._build_shot_card()
+        shot_card.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        root.addWidget(shot_card)
 
-        # STMap card
-        root.addWidget(self._build_stmap_card())
+        # STMap card (fixed height)
+        stmap_card = self._build_stmap_card()
+        stmap_card.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        root.addWidget(stmap_card)
 
-        # Spacer pushes action bar / log down only if space remains
-        root.addWidget(self._build_action_bar())
+        # Action bar (fixed height)
+        action_bar = self._build_action_bar()
+        action_bar.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        root.addWidget(action_bar)
 
-        # Log
-        root.addWidget(self._build_log_card(), 1)
+        # Log card absorbs all remaining vertical space
+        log_card = self._build_log_card()
+        log_card.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        root.addWidget(log_card, 1)
 
         # Status bar
         self.status = QStatusBar(self)
@@ -393,7 +401,7 @@ class MainWindow(QMainWindow):
         self.log_view = QPlainTextEdit()
         self.log_view.setReadOnly(True)
         self.log_view.setPlaceholderText("Output from the exporter will appear here.")
-        self.log_view.setMinimumHeight(150)
+        self.log_view.setMinimumHeight(120)
         lay.addWidget(self.log_view)
 
         return card
