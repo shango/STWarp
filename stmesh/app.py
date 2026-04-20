@@ -23,6 +23,22 @@ from . import __app_name__, __version__
 from . import core, theme
 
 
+def _icon_path() -> str | None:
+    """Locate the app icon whether running from source or a PyInstaller bundle."""
+    candidates = []
+    base = getattr(sys, "_MEIPASS", None)  # PyInstaller extraction dir
+    if base:
+        candidates.append(os.path.join(base, "assets", "stmesh.ico"))
+        candidates.append(os.path.join(base, "assets", "stmesh.png"))
+    here = os.path.dirname(os.path.abspath(__file__))
+    candidates.append(os.path.join(here, "..", "assets", "stmesh.ico"))
+    candidates.append(os.path.join(here, "..", "assets", "stmesh.png"))
+    for p in candidates:
+        if p and os.path.isfile(p):
+            return p
+    return None
+
+
 # ---------------------------------------------------------------------------
 # Reusable UI atoms
 # ---------------------------------------------------------------------------
@@ -200,9 +216,13 @@ class MainWindow(QMainWindow):
 
     def __init__(self) -> None:
         super().__init__()
-        self.setWindowTitle(f"{__app_name__} — AE Mesh Warp Preset Builder")
+        self.setWindowTitle(f"{__app_name__} - AE Mesh Warp Preset Builder")
         self.setMinimumSize(720, 640)
         self.resize(860, 760)
+
+        icon = _icon_path()
+        if icon:
+            self.setWindowIcon(QIcon(icon))
 
         self._thread: QThread | None = None
         self._worker: ExportWorker | None = None
@@ -503,7 +523,20 @@ def main() -> int:
     app.setApplicationDisplayName(__app_name__)
     app.setApplicationVersion(__version__)
     app.setOrganizationName("STMesh")
-    # Qt auto-detects HiDPI on 6.x; no extra hints needed.
+    icon = _icon_path()
+    if icon:
+        app.setWindowIcon(QIcon(icon))
+
+    # On Windows, set an explicit AppUserModelID so the taskbar groups
+    # our icon (and not the generic python.exe one) when running from
+    # source or the frozen .exe.
+    if sys.platform.startswith("win"):
+        try:
+            import ctypes
+            ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(
+                "STMesh.App")
+        except Exception:
+            pass
 
     win = MainWindow()
     win.show()

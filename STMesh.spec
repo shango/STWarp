@@ -10,7 +10,7 @@ a = Analysis(
     ['main.py'],
     pathex=[],
     binaries=[],
-    datas=[],
+    datas=[('assets/stmesh.ico', 'assets'), ('assets/stmesh.png', 'assets')],
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},
@@ -48,5 +48,5 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon=None,
+    icon='assets/stmesh.ico',
 )
