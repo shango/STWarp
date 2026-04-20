@@ -29,7 +29,7 @@ def read_exr_float(path: str) -> np.ndarray:
 
     Supports uncompressed, ZIP (16-line), and ZIPS (1-line) compression.
     Returns a numpy (H, W, 4) float32 array with R in channel 0 and G in
-    channel 1 — the only channels an STMap needs.
+    channel 1 (the only channels an STMap needs).
     """
     with open(path, "rb") as f:
         data = f.read()

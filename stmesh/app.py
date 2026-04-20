@@ -1,4 +1,4 @@
-"""STMesh main window — Adobe AE Mesh Warp preset builder."""
+"""STMesh main window: Adobe AE Mesh Warp preset builder."""
 
 from __future__ import annotations
 
@@ -69,6 +69,17 @@ def _make_card() -> QFrame:
     return card
 
 
+# Minimum clickable / editable height for any interactive control.
+# Keeps placeholders and text readable even when the window is at the
+# enforced minimum size. QSS padding is additive to this.
+CONTROL_H = 36
+
+
+def _size_control(w) -> None:
+    """Apply the shared minimum height to a control (QLineEdit, QPushButton, ...)."""
+    w.setMinimumHeight(CONTROL_H)
+
+
 class FileField(QWidget):
     """A labelled line-edit + browse button for picking a single file."""
 
@@ -96,11 +107,13 @@ class FileField(QWidget):
         self.edit = QLineEdit()
         self.edit.setPlaceholderText("No file selected")
         self.edit.textChanged.connect(self.changed)
+        _size_control(self.edit)
         row.addWidget(self.edit, 1)
 
         self.browse = QPushButton(browse_text)
         self.browse.setObjectName("ghost")
         self.browse.clicked.connect(self._browse)
+        _size_control(self.browse)
         row.addWidget(self.browse, 0)
 
         lay.addLayout(row)
@@ -141,11 +154,13 @@ class DirField(QWidget):
         self.edit = QLineEdit()
         self.edit.setPlaceholderText("Choose a folder")
         self.edit.textChanged.connect(self.changed)
+        _size_control(self.edit)
         row.addWidget(self.edit, 1)
 
         self.browse = QPushButton("Browse")
         self.browse.setObjectName("ghost")
         self.browse.clicked.connect(self._browse)
+        _size_control(self.browse)
         row.addWidget(self.browse, 0)
 
         lay.addLayout(row)
@@ -217,8 +232,8 @@ class MainWindow(QMainWindow):
     def __init__(self) -> None:
         super().__init__()
         self.setWindowTitle(f"{__app_name__} - AE Mesh Warp Preset Builder")
-        self.setMinimumSize(780, 880)
-        self.resize(900, 960)
+        self.setMinimumSize(780, 780)
+        self.resize(900, 860)
 
         icon = _icon_path()
         if icon:
@@ -238,30 +253,34 @@ class MainWindow(QMainWindow):
         # Header
         root.addLayout(self._build_header())
 
-        # Shot + output card (fixed height so its fields never get squashed)
+        # Shot + output card (cannot compress below its natural height)
         shot_card = self._build_shot_card()
         shot_card.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         root.addWidget(shot_card)
 
-        # STMap card (fixed height)
+        # STMap card
         stmap_card = self._build_stmap_card()
         stmap_card.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         root.addWidget(stmap_card)
 
-        # Action bar (fixed height)
+        # Action bar
         action_bar = self._build_action_bar()
         action_bar.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         root.addWidget(action_bar)
 
-        # Log card absorbs all remaining vertical space
-        log_card = self._build_log_card()
-        log_card.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-        root.addWidget(log_card, 1)
+        # Log card: hidden by default, toggled via the action bar.
+        # Expands to fill remaining space when visible.
+        self.log_card = self._build_log_card()
+        self.log_card.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.log_card.setVisible(False)
+        root.addWidget(self.log_card, 1)
+
+        # Push the status bar down when the log is hidden.
+        root.addStretch(0)
 
         # Status bar
         self.status = QStatusBar(self)
         self.setStatusBar(self.status)
-        self.status.showMessage("Ready.")
 
         self._wire_validation()
 
@@ -269,9 +288,30 @@ class MainWindow(QMainWindow):
 
     # ---- Sections ----
 
-    def _build_header(self) -> QVBoxLayout:
+    def _build_header(self) -> QHBoxLayout:
+        row = QHBoxLayout()
+        row.setSpacing(14)
+        row.setContentsMargins(0, 0, 0, 0)
+
+        icon_px = 56
+        badge = QLabel()
+        badge.setObjectName("badge")
+        badge.setFixedSize(icon_px, icon_px)
+        badge.setAlignment(Qt.AlignCenter)
+        icon = _icon_path()
+        if icon:
+            pm = QPixmap(icon)
+            if not pm.isNull():
+                pm = pm.scaled(
+                    icon_px, icon_px,
+                    Qt.KeepAspectRatio, Qt.SmoothTransformation,
+                )
+                badge.setPixmap(pm)
+        row.addWidget(badge, 0, Qt.AlignVCenter)
+
         col = QVBoxLayout()
         col.setSpacing(2)
+        col.setContentsMargins(0, 0, 0, 0)
 
         title = QLabel(__app_name__)
         title.setObjectName("title")
@@ -282,8 +322,11 @@ class MainWindow(QMainWindow):
             "STMap EXRs."
         )
         subtitle.setObjectName("subtitle")
+        subtitle.setWordWrap(True)
         col.addWidget(subtitle)
-        return col
+
+        row.addLayout(col, 1)
+        return row
 
     def _build_shot_card(self) -> QFrame:
         card = _make_card()
@@ -298,6 +341,7 @@ class MainWindow(QMainWindow):
         name_row.addWidget(_field_label("Shot name"))
         self.shot_edit = QLineEdit()
         self.shot_edit.setPlaceholderText("e.g. ABC_0100")
+        _size_control(self.shot_edit)
         name_row.addWidget(self.shot_edit)
         name_row.addWidget(_helper(
             "Used as the output folder and preset filename prefix. "
@@ -333,6 +377,7 @@ class MainWindow(QMainWindow):
         self.grid_combo.setToolTip(
             "Mesh resolution. Must match one of AE's supported sizes."
         )
+        _size_control(self.grid_combo)
         head.addWidget(self.grid_combo)
 
         lay.addLayout(head)
@@ -369,16 +414,25 @@ class MainWindow(QMainWindow):
 
         row.addStretch(1)
 
+        self.log_toggle = QPushButton("Show log")
+        self.log_toggle.setObjectName("ghost")
+        self.log_toggle.setCheckable(True)
+        self.log_toggle.toggled.connect(self._on_toggle_log)
+        _size_control(self.log_toggle)
+        row.addWidget(self.log_toggle)
+
         self.reveal_btn = QPushButton("Open output folder")
         self.reveal_btn.setObjectName("ghost")
         self.reveal_btn.setEnabled(False)
         self.reveal_btn.clicked.connect(self._on_reveal)
+        _size_control(self.reveal_btn)
         row.addWidget(self.reveal_btn)
 
         self.export_btn = QPushButton("Export presets")
         self.export_btn.setObjectName("primary")
         self.export_btn.setEnabled(False)
         self.export_btn.clicked.connect(self._on_export)
+        self.export_btn.setMinimumHeight(CONTROL_H + 6)
         row.addWidget(self.export_btn)
 
         return wrap
@@ -386,22 +440,16 @@ class MainWindow(QMainWindow):
     def _build_log_card(self) -> QFrame:
         card = _make_card()
         lay = QVBoxLayout(card)
-        lay.setContentsMargins(20, 14, 20, 18)
-        lay.setSpacing(8)
+        lay.setContentsMargins(16, 10, 16, 14)
+        lay.setSpacing(6)
 
-        head = QHBoxLayout()
-        head.addWidget(_section_label("Log"))
-        head.addStretch(1)
-        clear = QPushButton("Clear")
-        clear.setObjectName("ghost")
-        clear.clicked.connect(lambda: self.log_view.clear())
-        head.addWidget(clear)
-        lay.addLayout(head)
+        lay.addWidget(_section_label("Log"))
 
         self.log_view = QPlainTextEdit()
         self.log_view.setReadOnly(True)
         self.log_view.setPlaceholderText("Output from the exporter will appear here.")
-        self.log_view.setMinimumHeight(120)
+        self.log_view.setMinimumHeight(80)
+        self.log_view.setMaximumHeight(140)
         lay.addWidget(self.log_view)
 
         return card
@@ -442,9 +490,10 @@ class MainWindow(QMainWindow):
             self.status.showMessage("Undistort STMap must be a .exr file.")
         elif d and not d.lower().endswith(".exr"):
             self.status.showMessage("Distort STMap must be a .exr file.")
+        elif self.export_btn.isEnabled():
+            self.status.showMessage("Ready.")
         else:
-            self.status.showMessage("Ready." if self.export_btn.isEnabled()
-                                    else "Fill in the fields above to export.")
+            self.status.clearMessage()
 
     def _append_log(self, msg: str) -> None:
         self.log_view.appendPlainText(msg)
@@ -497,7 +546,14 @@ class MainWindow(QMainWindow):
         self.progress.setVisible(False)
         self.export_btn.setEnabled(True)
         self.status.showMessage("Export failed.")
+        # Auto-reveal the log so the user can read what went wrong.
+        if not self.log_toggle.isChecked():
+            self.log_toggle.setChecked(True)
         QMessageBox.critical(self, "Export failed", message)
+
+    def _on_toggle_log(self, visible: bool) -> None:
+        self.log_card.setVisible(visible)
+        self.log_toggle.setText("Hide log" if visible else "Show log")
 
     def _on_thread_cleanup(self) -> None:
         self._thread = None
