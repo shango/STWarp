@@ -14,7 +14,7 @@ from PySide6.QtCore import (
 )
 from PySide6.QtGui import QAction, QFont, QIcon, QKeySequence, QPixmap
 from PySide6.QtWidgets import (
-    QApplication, QComboBox, QFileDialog, QFrame, QHBoxLayout, QLabel,
+    QApplication, QFileDialog, QFrame, QHBoxLayout, QLabel,
     QLineEdit, QMainWindow, QMessageBox, QPlainTextEdit, QProgressBar,
     QPushButton, QSizePolicy, QStatusBar, QVBoxLayout, QWidget,
 )
@@ -246,11 +246,14 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(central)
 
         root = QVBoxLayout(central)
-        root.setContentsMargins(28, 24, 28, 20)
-        root.setSpacing(18)
+        root.setContentsMargins(28, 2, 28, 16)
+        root.setSpacing(14)
 
         # Header
-        root.addLayout(self._build_header())
+        header = self._build_header()
+        root.addLayout(header)
+        # Pull the first card closer to the header.
+        root.addSpacing(-4)
 
         # Shot + output card (cannot compress below its natural height)
         shot_card = self._build_shot_card()
@@ -310,12 +313,23 @@ class MainWindow(QMainWindow):
 
     def _build_header(self) -> QVBoxLayout:
         col = QVBoxLayout()
-        col.setSpacing(2)
+        col.setSpacing(0)
         col.setContentsMargins(0, 0, 0, 0)
+
+        title_row = QHBoxLayout()
+        title_row.setSpacing(8)
+        title_row.setContentsMargins(0, 0, 0, 0)
 
         title = QLabel(__app_name__)
         title.setObjectName("title")
-        col.addWidget(title)
+        title_row.addWidget(title, 0, Qt.AlignBottom)
+
+        version = QLabel(f"v{__version__}")
+        version.setObjectName("version")
+        title_row.addWidget(version, 0, Qt.AlignBottom)
+
+        title_row.addStretch(1)
+        col.addLayout(title_row)
 
         subtitle = QLabel(
             "Build After Effects Mesh Warp .ffx presets from 32-bit "
@@ -363,23 +377,7 @@ class MainWindow(QMainWindow):
         lay.setContentsMargins(20, 18, 20, 20)
         lay.setSpacing(14)
 
-        head = QHBoxLayout()
-        head.addWidget(_section_label("STMaps"))
-        head.addStretch(1)
-
-        head.addWidget(_field_label("Grid"))
-        self.grid_combo = QComboBox()
-        for r in core.VALID_GRID_RES:
-            self.grid_combo.addItem(f"{r} x {r}", userData=r)
-        self.grid_combo.setCurrentIndex(
-            list(core.VALID_GRID_RES).index(core.DEFAULT_GRID_RES))
-        self.grid_combo.setToolTip(
-            "Mesh resolution. Must match one of AE's supported sizes."
-        )
-        _size_control(self.grid_combo)
-        head.addWidget(self.grid_combo)
-
-        lay.addLayout(head)
+        lay.addWidget(_section_label("STMaps"))
 
         self.undistort_field = FileField(
             "Undistort STMap",
@@ -501,7 +499,7 @@ class MainWindow(QMainWindow):
             export_dir=self.export_dir.value(),
             undistort_stmap=self.undistort_field.value(),
             distort_stmap=self.distort_field.value(),
-            grid_res=int(self.grid_combo.currentData()),
+            grid_res=core.DEFAULT_GRID_RES,
         )
 
         self.export_btn.setEnabled(False)

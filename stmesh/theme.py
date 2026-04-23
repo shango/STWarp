@@ -37,15 +37,26 @@ QMainWindow, QDialog, QWidget#central {{
 }}
 
 QLabel#title {{
-    font-size: 22px;
+    font-size: 18px;
     font-weight: 600;
     letter-spacing: 0.2px;
     color: {TEXT};
+    margin: 0;
+    padding: 0;
 }}
 
 QLabel#subtitle {{
     color: {TEXT_DIM};
-    font-size: 13px;
+    font-size: 12px;
+    margin: 0;
+    padding: 0;
+}}
+
+QLabel#version {{
+    color: {TEXT_MUTED};
+    font-size: 11px;
+    font-weight: 500;
+    padding-bottom: 2px;
 }}
 
 QLabel#sectionTitle {{
