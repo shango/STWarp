@@ -59,6 +59,13 @@ QLabel#version {{
     padding-bottom: 2px;
 }}
 
+QLabel#logo {{
+    background: transparent;
+    margin: 0;
+    padding: 0;
+    border: none;
+}}
+
 QLabel#sectionTitle {{
     color: {TEXT_DIM};
     font-size: 11px;
