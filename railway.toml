@@ -1,0 +1,12 @@
+# Railway build/deploy config for the STWarp web app.
+# Build context is the repo root so both `stmesh/` and `web/` are
+# available to the Dockerfile.
+
+[build]
+builder = "DOCKERFILE"
+dockerfilePath = "web/Dockerfile"
+
+[deploy]
+healthcheckPath = "/healthz"
+healthcheckTimeout = 30
+restartPolicyType = "ON_FAILURE"

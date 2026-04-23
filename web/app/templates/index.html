@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ app_name }} — AE Mesh Warp Preset Builder</title>
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+  <main class="shell">
+    <header class="header">
+      <div class="brand">
+        <span class="wordmark">{{ app_name }}</span>
+        <span class="version">v{{ version }}</span>
+      </div>
+      <p class="tagline">
+        Build After Effects Mesh Warp <code>.ffx</code> presets from 32-bit STMap EXRs.
+      </p>
+    </header>
+
+    <form id="export-form" class="card" autocomplete="off">
+      <section class="section">
+        <h2 class="section-title">Shot</h2>
+
+        <label class="field">
+          <span class="field-label">Shot name</span>
+          <input type="text" name="shot_name" id="shot_name"
+                 placeholder="e.g. ABC_0100" required
+                 pattern="^[A-Za-z0-9][A-Za-z0-9_.\-]*$">
+          <small class="help">
+            Used as the download filename prefix. Letters, numbers,
+            underscore, dot, and hyphen only.
+          </small>
+        </label>
+      </section>
+
+      <section class="section">
+        <h2 class="section-title">STMaps</h2>
+        <small class="help meta">
+          Grid resolution: {{ grid_res }} &times; {{ grid_res }}.
+        </small>
+
+        <div class="drop" data-slot="undistort">
+          <input type="file" name="undistort" id="undistort"
+                 accept=".exr" required hidden>
+          <div class="drop-body">
+            <span class="drop-title">Undistort STMap</span>
+            <span class="drop-help">
+              32-bit EXR that maps distorted pixels to their undistorted positions.
+            </span>
+            <span class="drop-filename" data-empty="Drop .exr here, or click to browse">
+              Drop .exr here, or click to browse
+            </span>
+          </div>
+        </div>
+
+        <div class="drop" data-slot="distort">
+          <input type="file" name="distort" id="distort"
+                 accept=".exr" required hidden>
+          <div class="drop-body">
+            <span class="drop-title">Distort STMap</span>
+            <span class="drop-help">
+              32-bit EXR that re-applies lens distortion (a.k.a. redistort).
+            </span>
+            <span class="drop-filename" data-empty="Drop .exr here, or click to browse">
+              Drop .exr here, or click to browse
+            </span>
+          </div>
+        </div>
+      </section>
+
+      <section class="action-bar">
+        <div class="status" id="status" aria-live="polite"></div>
+        <button class="primary" id="export-btn" type="submit" disabled>
+          Export presets
+        </button>
+      </section>
+
+      <div class="progress" id="progress" hidden>
+        <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
+        <span class="progress-label" id="progress-label">Uploading…</span>
+      </div>
+    </form>
+
+    <footer class="footer">
+      <span>{{ app_name }} v{{ version }}</span>
+    </footer>
+  </main>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
