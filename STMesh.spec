@@ -10,7 +10,11 @@ a = Analysis(
     ['main.py'],
     pathex=[],
     binaries=[],
-    datas=[('assets/stmesh.ico', 'assets'), ('assets/stmesh.png', 'assets')],
+    datas=[
+        ('assets/stmesh.ico', 'assets'),
+        ('assets/stmesh.png', 'assets'),
+        ('assets/stwarp_logo.png', 'assets'),
+    ],
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},

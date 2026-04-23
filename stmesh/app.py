@@ -23,20 +23,27 @@ from . import __app_name__, __version__
 from . import core, theme
 
 
-def _icon_path() -> str | None:
-    """Locate the app icon whether running from source or a PyInstaller bundle."""
+def _asset_path(*names: str) -> str | None:
+    """Locate an asset whether running from source or a PyInstaller bundle."""
     candidates = []
     base = getattr(sys, "_MEIPASS", None)  # PyInstaller extraction dir
-    if base:
-        candidates.append(os.path.join(base, "assets", "stmesh.ico"))
-        candidates.append(os.path.join(base, "assets", "stmesh.png"))
     here = os.path.dirname(os.path.abspath(__file__))
-    candidates.append(os.path.join(here, "..", "assets", "stmesh.ico"))
-    candidates.append(os.path.join(here, "..", "assets", "stmesh.png"))
+    for name in names:
+        if base:
+            candidates.append(os.path.join(base, "assets", name))
+        candidates.append(os.path.join(here, "..", "assets", name))
     for p in candidates:
         if p and os.path.isfile(p):
             return p
     return None
+
+
+def _icon_path() -> str | None:
+    return _asset_path("stmesh.ico", "stmesh.png")
+
+
+def _logo_path() -> str | None:
+    return _asset_path("stwarp_logo.png")
 
 
 # ---------------------------------------------------------------------------
@@ -246,14 +253,14 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(central)
 
         root = QVBoxLayout(central)
-        root.setContentsMargins(28, 2, 28, 16)
+        root.setContentsMargins(28, 0, 28, 16)
         root.setSpacing(14)
 
         # Header
         header = self._build_header()
         root.addLayout(header)
         # Pull the first card closer to the header.
-        root.addSpacing(-4)
+        root.addSpacing(-6)
 
         # Shot + output card (cannot compress below its natural height)
         shot_card = self._build_shot_card()
@@ -317,12 +324,26 @@ class MainWindow(QMainWindow):
         col.setContentsMargins(0, 0, 0, 0)
 
         title_row = QHBoxLayout()
-        title_row.setSpacing(8)
+        title_row.setSpacing(10)
         title_row.setContentsMargins(0, 0, 0, 0)
 
-        title = QLabel(__app_name__)
-        title.setObjectName("title")
-        title_row.addWidget(title, 0, Qt.AlignBottom)
+        logo = QLabel()
+        logo.setObjectName("logo")
+        logo.setContentsMargins(0, 0, 0, 0)
+        logo_path = _logo_path()
+        if logo_path:
+            pix = QPixmap(logo_path)
+            if not pix.isNull():
+                target_h = 72
+                pix = pix.scaledToHeight(
+                    target_h, Qt.SmoothTransformation)
+                logo.setPixmap(pix)
+                logo.setFixedHeight(target_h)
+        else:
+            logo.setText(__app_name__)
+            logo.setObjectName("title")
+        logo.setAccessibleName(__app_name__)
+        title_row.addWidget(logo, 0, Qt.AlignBottom)
 
         version = QLabel(f"v{__version__}")
         version.setObjectName("version")
