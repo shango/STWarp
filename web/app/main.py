@@ -107,7 +107,6 @@ async def index(request: Request) -> HTMLResponse:
         {
             "app_name": __app_name__,
             "version": __version__,
-            "grid_res": core.DEFAULT_GRID_RES,
         },
     )
 
