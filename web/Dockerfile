@@ -16,6 +16,12 @@ RUN pip install -r /app/web/requirements.txt
 COPY stwarp /app/stwarp
 COPY web /app/web
 
+# Run as an unprivileged user so an exploit of the app doesn't land on
+# root inside the container.
+RUN adduser --disabled-password --gecos "" --uid 10001 appuser \
+    && chown -R appuser /app
+USER appuser
+
 EXPOSE 8000
 # Railway injects $PORT; default to 8000 for local `docker run`.
 CMD ["sh", "-c", "uvicorn web.app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]

@@ -240,6 +240,10 @@ def _read_exr_float_unsafe(path: str) -> np.ndarray:
                     vals = np.frombuffer(ch_data, dtype="<u4").astype(np.float32)
                 pixels[y_row, :len(vals), out_ch] = vals
 
+    # Sanitise hostile pixel values before downstream math. NaN / Inf in
+    # an STMap would propagate through sampling and silently write
+    # corrupt floats into the .ffx, so replace them with 0.
+    np.nan_to_num(pixels, copy=False, nan=0.0, posinf=0.0, neginf=0.0)
     return pixels
 
 
@@ -554,6 +558,12 @@ def export_presets(shot_name: str,
         raise ValueError(
             f"Grid resolution {grid_res} not supported. "
             f"Valid values: {sorted(VALID_GRID_RES)}")
+    # Bound frame_offset so the timecode packing below can't overflow
+    # the ">I" (uint32) range. At 24 fps this covers ~69 days of frames;
+    # any legitimate AE workflow is far below that.
+    if frame_offset < 0 or frame_offset > 100_000:
+        raise ValueError(
+            f"frame_offset {frame_offset} is out of range [0, 100000]")
     for label, path in (("undistort", undistort_stmap), ("distort", distort_stmap)):
         if not path:
             raise ValueError(f"The {label} STMap EXR is required.")

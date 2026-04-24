@@ -135,8 +135,12 @@
     e.preventDefault();
     if (btn.disabled) return;
 
+    // Snapshot the shot name before the async upload so a mid-flight
+    // edit of the field can't mismatch the downloaded file's name.
+    const shotName = shotInput.value.trim();
+
     const data = new FormData();
-    data.append("shot_name", shotInput.value.trim());
+    data.append("shot_name", shotName);
     data.append("undistort", state.files.undistort);
     data.append("distort", state.files.distort);
 
@@ -148,7 +152,7 @@
 
     try {
       const blob = await uploadWithProgress(data);
-      const zipName = `${shotInput.value.trim()}_AE_mesh_warp_presets.zip`;
+      const zipName = `${shotName}_AE_mesh_warp_presets.zip`;
       triggerDownload(blob, zipName);
       setStatus(`Downloaded ${zipName}. Ready for the next shot.`, "success");
       resetForm();
