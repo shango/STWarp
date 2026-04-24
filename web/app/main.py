@@ -153,8 +153,8 @@ async def export(
     try:
         undist_path = upload_dir / "undistort.exr"
         dist_path = upload_dir / "distort.exr"
-        await _save_upload(undistort, undist_path)
-        await _save_upload(distort, dist_path)
+        await _save_upload(undistort, undist_path, "undistort")
+        await _save_upload(distort, dist_path, "distort")
 
         try:
             result = core.export_presets(
@@ -190,7 +190,7 @@ async def export(
         raise
 
 
-async def _save_upload(upload: UploadFile, dest: Path) -> None:
+async def _save_upload(upload: UploadFile, dest: Path, label: str) -> None:
     """Stream an upload to disk, enforcing a per-file size cap."""
     total = 0
     with dest.open("wb") as fh:
@@ -198,13 +198,13 @@ async def _save_upload(upload: UploadFile, dest: Path) -> None:
             chunk = await upload.read(1024 * 1024)
             if not chunk:
                 break
-            total += len(chunk)
-            if total > MAX_UPLOAD_BYTES:
+            if total + len(chunk) > MAX_UPLOAD_BYTES:
                 raise HTTPException(
                     status_code=413,
                     detail=(
-                        f"{upload.filename} exceeds the "
+                        f"The {label} STMap exceeds the "
                         f"{MAX_UPLOAD_BYTES // (1024 * 1024)} MB limit."
                     ),
                 )
             fh.write(chunk)
+            total += len(chunk)

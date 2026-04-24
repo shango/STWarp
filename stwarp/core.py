@@ -24,6 +24,15 @@ DEFAULT_GRID_RES = 11
 # EXR reader (scanline float / half, uncompressed / ZIP / ZIPS)
 # ---------------------------------------------------------------------------
 
+# Hard caps to bound hostile inputs from the web endpoint. 16384 covers
+# 8K plates with headroom; 1 MB of header bytes is orders of magnitude
+# more than any legitimate EXR; 256 attributes is likewise generous.
+MAX_EXR_DIM = 16384
+MAX_EXR_HEADER_BYTES = 1 * 1024 * 1024
+MAX_EXR_HEADER_ATTRS = 256
+MAX_EXR_ATTR_BYTES = 64 * 1024
+
+
 def read_exr_float(path: str) -> np.ndarray:
     """Minimal OpenEXR reader for scanline float/half EXRs.
 
@@ -31,56 +40,104 @@ def read_exr_float(path: str) -> np.ndarray:
     Returns a numpy (H, W, 4) float32 array with R in channel 0 and G in
     channel 1 (the only channels an STMap needs).
     """
+    try:
+        return _read_exr_float_unsafe(path)
+    except ValueError:
+        raise
+    except (struct.error, KeyError, IndexError, zlib.error) as exc:
+        raise ValueError(f"Malformed EXR file: {path} ({exc})") from exc
+
+
+def _read_exr_float_unsafe(path: str) -> np.ndarray:
     with open(path, "rb") as f:
         data = f.read()
 
     if len(data) < 8 or data[:4] != b"\x76\x2f\x31\x01":
         raise ValueError(f"Not a valid EXR file: {path}")
 
+    header_limit = min(len(data), MAX_EXR_HEADER_BYTES)
     pos = 8  # skip magic + version
 
     channels = []  # [(name, pixel_type)]
     compression = 0
     data_window = (0, 0, 0, 0)
 
+    bpc = {0: 4, 1: 2, 2: 4}  # 0=uint32, 1=half, 2=float
+
+    attrs_seen = 0
     while True:
-        end = data.index(b"\x00", pos)
-        attr_name = data[pos:end].decode("ascii")
+        if pos >= header_limit:
+            raise ValueError("Malformed EXR: header terminator not found")
+        attrs_seen += 1
+        if attrs_seen > MAX_EXR_HEADER_ATTRS:
+            raise ValueError("Malformed EXR: too many header attributes")
+
+        end = data.find(b"\x00", pos, header_limit)
+        if end < 0:
+            raise ValueError("Malformed EXR: attribute name not terminated")
+        attr_name = data[pos:end].decode("ascii", errors="replace")
         pos = end + 1
         if not attr_name:
             break
 
-        end = data.index(b"\x00", pos)
-        _attr_type = data[pos:end].decode("ascii")
+        end = data.find(b"\x00", pos, header_limit)
+        if end < 0:
+            raise ValueError("Malformed EXR: attribute type not terminated")
+        _attr_type = data[pos:end].decode("ascii", errors="replace")
         pos = end + 1
 
+        if pos + 4 > len(data):
+            raise ValueError("Malformed EXR: truncated attribute size")
         attr_size = struct.unpack("<I", data[pos:pos + 4])[0]
         pos += 4
+        if attr_size > MAX_EXR_ATTR_BYTES or pos + attr_size > len(data):
+            raise ValueError(
+                f"Malformed EXR: attribute '{attr_name}' has invalid size "
+                f"{attr_size}")
         attr_data = data[pos:pos + attr_size]
         pos += attr_size
 
         if attr_name == "channels":
             cp = 0
             while cp < len(attr_data) - 1:
-                ne = attr_data.index(b"\x00", cp)
-                ch_name = attr_data[cp:ne].decode("ascii")
+                ne = attr_data.find(b"\x00", cp)
+                if ne < 0:
+                    raise ValueError(
+                        "Malformed EXR: channel name not terminated")
+                ch_name = attr_data[cp:ne].decode("ascii", errors="replace")
                 cp = ne + 1
                 if not ch_name:
                     break
+                if cp + 16 > len(attr_data):
+                    raise ValueError(
+                        "Malformed EXR: truncated channel descriptor")
                 ptype = struct.unpack("<I", attr_data[cp:cp + 4])[0]
+                if ptype not in bpc:
+                    raise ValueError(
+                        f"Unsupported EXR channel pixel type: {ptype}")
                 cp += 4
                 cp += 12  # pLinear + reserved + xSampling + ySampling
                 channels.append((ch_name, ptype))
         elif attr_name == "compression":
+            if not attr_data:
+                raise ValueError("Malformed EXR: empty compression attribute")
             compression = attr_data[0]
         elif attr_name == "dataWindow":
-            data_window = struct.unpack("<iiii", attr_data)
+            if len(attr_data) < 16:
+                raise ValueError("Malformed EXR: truncated dataWindow")
+            data_window = struct.unpack("<iiii", attr_data[:16])
+
+    if not channels:
+        raise ValueError("Malformed EXR: no channels declared")
 
     x1, y1, x2, y2 = data_window
     w = x2 - x1 + 1
     h = y2 - y1 + 1
+    if w <= 0 or h <= 0 or w > MAX_EXR_DIM or h > MAX_EXR_DIM:
+        raise ValueError(
+            f"EXR dimensions out of range: {w}x{h} "
+            f"(max {MAX_EXR_DIM}x{MAX_EXR_DIM})")
 
-    bpc = {0: 4, 1: 2, 2: 4}  # 0=uint32, 1=half, 2=float
     bytes_per_pixel = sum(bpc[ch[1]] for ch in channels)
 
     if compression == 0:
@@ -94,7 +151,7 @@ def read_exr_float(path: str) -> np.ndarray:
             0: "none", 1: "rle", 2: "zips", 3: "zip", 4: "piz",
             5: "pxr24", 6: "b44", 7: "b44a", 8: "dwaa", 9: "dwab",
         }
-        raise RuntimeError(
+        raise ValueError(
             "Unsupported EXR compression: {} ({}). "
             "STMap EXRs should use ZIP compression. "
             "Re-export with 'Zip (16 scanlines)'.".format(
@@ -102,6 +159,8 @@ def read_exr_float(path: str) -> np.ndarray:
 
     num_chunks = (h + lines_per_chunk - 1) // lines_per_chunk
 
+    if pos + 8 * num_chunks > len(data):
+        raise ValueError("Malformed EXR: truncated chunk offset table")
     offsets = []
     for _ in range(num_chunks):
         offsets.append(struct.unpack("<Q", data[pos:pos + 8])[0])
@@ -115,15 +174,35 @@ def read_exr_float(path: str) -> np.ndarray:
 
     for chunk_i in range(num_chunks):
         off = offsets[chunk_i]
+        if off < 0 or off + 8 > len(data):
+            raise ValueError("Malformed EXR: chunk offset out of range")
         y_start = struct.unpack("<i", data[off:off + 4])[0] - y1
         chunk_size = struct.unpack("<I", data[off + 4:off + 8])[0]
+        if chunk_size > len(data) or off + 8 + chunk_size > len(data):
+            raise ValueError("Malformed EXR: chunk size out of range")
         raw = data[off + 8:off + 8 + chunk_size]
 
         n_lines = min(lines_per_chunk, h - y_start)
+        if y_start < 0 or n_lines <= 0:
+            raise ValueError("Malformed EXR: chunk y_start out of range")
         expected = n_lines * w * bytes_per_pixel
 
         if compression in (2, 3) and len(raw) < expected:
-            raw = zlib.decompress(raw)
+            # Bound zlib expansion to the known expected size (+1 so we can
+            # detect over-runs). Anything beyond is treated as a bomb.
+            decomp = zlib.decompressobj()
+            out = decomp.decompress(raw, max_length=expected + 1)
+            if decomp.unconsumed_tail or len(out) > expected:
+                raise ValueError(
+                    "EXR chunk decompresses beyond the expected size")
+            try:
+                out += decomp.flush()
+            except zlib.error:
+                pass
+            if len(out) > expected:
+                raise ValueError(
+                    "EXR chunk decompresses beyond the expected size")
+            raw = out
             arr = np.frombuffer(raw, dtype=np.uint8).copy()
             arr[1:] -= np.uint8(128)
             arr = np.cumsum(arr, dtype=np.uint8)
