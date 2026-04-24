@@ -1,4 +1,4 @@
-"""STMesh main window: Adobe AE Mesh Warp preset builder."""
+"""STWarp main window: Adobe AE Mesh Warp preset builder."""
 
 from __future__ import annotations
 
@@ -39,7 +39,7 @@ def _asset_path(*names: str) -> str | None:
 
 
 def _icon_path() -> str | None:
-    return _asset_path("stmesh.ico", "stmesh.png")
+    return _asset_path("stwarp.ico", "stwarp.png")
 
 
 def _logo_path() -> str | None:
@@ -609,7 +609,7 @@ def main() -> int:
     app.setApplicationName(__app_name__)
     app.setApplicationDisplayName(__app_name__)
     app.setApplicationVersion(__version__)
-    app.setOrganizationName("STMesh")
+    app.setOrganizationName("STWarp")
     icon = _icon_path()
     if icon:
         app.setWindowIcon(QIcon(icon))
@@ -621,7 +621,7 @@ def main() -> int:
         try:
             import ctypes
             ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(
-                "STMesh.App")
+                "STWarp.App")
         except Exception:
             pass
 

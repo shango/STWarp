@@ -13,7 +13,7 @@ COPY web/requirements.txt /app/web/requirements.txt
 RUN pip install -r /app/web/requirements.txt
 
 # Copy shared core package + web app.
-COPY stmesh /app/stmesh
+COPY stwarp /app/stwarp
 COPY web /app/web
 
 EXPOSE 8000

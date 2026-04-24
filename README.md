@@ -1,10 +1,10 @@
-# STMesh
+# STWarp
 
 Standalone desktop app for building Adobe After Effects Mesh Warp `.ffx`
 presets from 32-bit STMap EXR files.
 
 Given a shot name, an export location, and a pair of STMap EXRs
-(undistort and distort), STMesh writes:
+(undistort and distort), STWarp writes:
 
 ```
 <export_location>/
@@ -20,7 +20,7 @@ or remove lens distortion.
 
 - Windows 10 or 11
 - Python 3.10 or newer on `PATH` (only needed to build; the final
-  `STMesh.exe` runs standalone)
+  `STWarp.exe` runs standalone)
 
 ## Windows build
 
@@ -28,7 +28,7 @@ The repo is developed on WSL/Linux and copied over to Windows for
 builds. The expected location on the Windows side is:
 
 ```
-C:\Users\shann\Documents\STMesh
+C:\Users\shann\Documents\STWarp
 ```
 
 Each time you sync a new commit, overwrite the source files in that
@@ -39,7 +39,7 @@ From that folder, run `build.bat`:
 
 | Command           | What it does                                                 |
 | ----------------- | ------------------------------------------------------------ |
-| `build.bat`       | Build `dist\STMesh.exe`                                      |
+| `build.bat`       | Build `dist\STWarp.exe`                                      |
 | `build.bat run`   | Build, then launch the app                                   |
 | `build.bat clean` | Wipe `build\`, `dist\`, and `__pycache__\` first, then build |
 | `build.bat dev`   | Run from source without freezing (for quick iteration)       |
@@ -47,7 +47,7 @@ From that folder, run `build.bat`:
 The first run creates `.venv` and installs PySide6, numpy, and
 PyInstaller. Subsequent runs are much faster.
 
-Final output: `C:\Users\shann\Documents\STMesh\dist\STMesh.exe`
+Final output: `C:\Users\shann\Documents\STWarp\dist\STWarp.exe`
 
 ## Running from source (any platform)
 
@@ -55,7 +55,7 @@ Final output: `C:\Users\shann\Documents\STMesh\dist\STMesh.exe`
 python -m venv .venv
 . .venv/bin/activate     # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
-python -m stmesh
+python -m stwarp
 ```
 
 ## Using the app
@@ -102,17 +102,17 @@ you expect.
 ## Project layout
 
 ```
-stmesh/
+stwarp/
   core.py     STMap EXR reader, grid sampler, .ffx writer
   app.py      PySide6 UI (main window, workers, validation)
   theme.py    Qt stylesheet
 main.py       PyInstaller entry point
-STMesh.spec   PyInstaller build config
+STWarp.spec   PyInstaller build config
 build.bat     Windows build script
 ```
 
 ## Credits
 
 The EXR reader, grid sampler, and `.ffx` writer were originally part
-of ExportGenie (`ExportGenie-REF.py` in this repo). STMesh factors
+of ExportGenie (`ExportGenie-REF.py` in this repo). STWarp factors
 that logic out into a small standalone app.

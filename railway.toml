@@ -1,5 +1,5 @@
 # Railway build/deploy config for the STWarp web app.
-# Build context is the repo root so both `stmesh/` and `web/` are
+# Build context is the repo root so both `stwarp/` and `web/` are
 # available to the Dockerfile.
 
 [build]

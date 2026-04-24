@@ -1,4 +1,4 @@
-"""Allow `python -m stmesh` to launch the app."""
+"""Allow `python -m stwarp` to launch the app."""
 
 from .app import main
 

@@ -1,4 +1,4 @@
-# PyInstaller spec for STMesh.
+# PyInstaller spec for STWarp.
 # Built as a single-file, windowed (no console) executable.
 # Invoked by build.bat / build.py.
 
@@ -11,8 +11,8 @@ a = Analysis(
     pathex=[],
     binaries=[],
     datas=[
-        ('assets/stmesh.ico', 'assets'),
-        ('assets/stmesh.png', 'assets'),
+        ('assets/stwarp.ico', 'assets'),
+        ('assets/stwarp.png', 'assets'),
         ('assets/stwarp_logo.png', 'assets'),
     ],
     hiddenimports=[],
@@ -40,7 +40,7 @@ exe = EXE(
     a.zipfiles,
     a.datas,
     [],
-    name='STMesh',
+    name='STWarp',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
@@ -52,5 +52,5 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon='assets/stmesh.ico',
+    icon='assets/stwarp.ico',
 )

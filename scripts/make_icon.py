@@ -1,7 +1,7 @@
-"""Generate the STMesh app icon.
+"""Generate the STWarp app icon.
 
-Produces assets/stmesh.ico (multi-size Windows icon) and
-assets/stmesh.png (1024x1024 reference master) from a procedural
+Produces assets/stwarp.ico (multi-size Windows icon) and
+assets/stwarp.png (1024x1024 reference master) from a procedural
 STMap-style gradient: R = x, G = (1 - y), B = 0, with rounded corners
 and a soft border. The result looks like a miniature STMap tile and
 is used both as the Windows executable icon and as the in-app window
@@ -22,8 +22,8 @@ from PIL import Image, ImageDraw, ImageFilter
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 ASSETS_DIR = REPO_ROOT / "assets"
-ICO_PATH = ASSETS_DIR / "stmesh.ico"
-PNG_PATH = ASSETS_DIR / "stmesh.png"
+ICO_PATH = ASSETS_DIR / "stwarp.ico"
+PNG_PATH = ASSETS_DIR / "stwarp.png"
 
 # Sizes bundled into the .ico so Windows picks the right one for each surface.
 ICO_SIZES = [16, 24, 32, 48, 64, 128, 256]

@@ -1,4 +1,4 @@
-"""Qt stylesheet + palette for STMesh.
+"""Qt stylesheet + palette for STWarp.
 
 A dark, modern look with a single accent colour. Designed for readability
 on high-DPI displays and to feel at home next to modern VFX tools.

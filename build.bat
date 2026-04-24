@@ -1,13 +1,13 @@
 @echo off
 rem -------------------------------------------------------------------------
-rem STMesh - Windows build script
+rem STWarp - Windows build script
 rem
-rem Expected location: C:\Users\shann\Documents\STMesh
+rem Expected location: C:\Users\shann\Documents\STWarp
 rem
 rem Usage:
-rem   build.bat           -> build dist\STMesh.exe
+rem   build.bat           -> build dist\STWarp.exe
 rem   build.bat clean     -> wipe build/dist/__pycache__, then build
-rem   build.bat run       -> build, then launch dist\STMesh.exe
+rem   build.bat run       -> build, then launch dist\STWarp.exe
 rem   build.bat dev       -> run from source, no freeze
 rem -------------------------------------------------------------------------
 
@@ -70,7 +70,7 @@ if /I "%MODE%"=="dev" (
     "%VPY%" -m pip install -r requirements.txt
     if errorlevel 1 exit /b 1
     echo [3/3] Launching from source ...
-    "%VPY%" -m stmesh
+    "%VPY%" -m stwarp
     exit /b %ERRORLEVEL%
 )
 
@@ -84,23 +84,23 @@ if errorlevel 1 (
 )
 
 echo [3/3] Running PyInstaller ...
-"%VPY%" -m PyInstaller --noconfirm --clean STMesh.spec
+"%VPY%" -m PyInstaller --noconfirm --clean STWarp.spec
 if errorlevel 1 (
     echo [ERROR] PyInstaller failed.
     exit /b 1
 )
 
-if not exist "dist\STMesh.exe" (
-    echo [ERROR] PyInstaller finished but dist\STMesh.exe is missing.
+if not exist "dist\STWarp.exe" (
+    echo [ERROR] PyInstaller finished but dist\STWarp.exe is missing.
     exit /b 1
 )
 
 echo.
-echo Build complete: %CD%\dist\STMesh.exe
+echo Build complete: %CD%\dist\STWarp.exe
 
 if /I "%MODE%"=="run" (
-    echo Launching STMesh ...
-    start "" "dist\STMesh.exe"
+    echo Launching STWarp ...
+    start "" "dist\STWarp.exe"
 )
 exit /b 0
 

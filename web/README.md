@@ -1,6 +1,6 @@
 # STWarp Web
 
-FastAPI wrapper around `stmesh.core` — upload two STMap EXRs, download a
+FastAPI wrapper around `stwarp.core` — upload two STMap EXRs, download a
 zip of AE Mesh Warp `.ffx` presets.
 
 ## Run locally
@@ -26,6 +26,6 @@ docker run --rm -p 8000:8000 stwarp-web
 `railway.toml` at the repo root points Railway at `web/Dockerfile`.
 Push the branch/commit to GitHub; Railway rebuilds automatically.
 
-- Build context: repo root (so `stmesh/` is importable inside the image).
+- Build context: repo root (so `stwarp/` is importable inside the image).
 - Health check: `GET /healthz`.
 - Port: Railway injects `$PORT`; the container honours it.

@@ -15,7 +15,7 @@ from fastapi.responses import HTMLResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
-from stmesh import __app_name__, __version__, core
+from stwarp import __app_name__, __version__, core
 
 
 APP_DIR = Path(__file__).resolve().parent
