@@ -22,13 +22,31 @@
     if (kind) status.classList.add(kind);
   }
 
+  function clearTransientStatus() {
+    if (status.classList.contains("error") || status.classList.contains("success")) {
+      setStatus("");
+    }
+  }
+
   function refresh() {
-    const filesOk = state.files.undistort && state.files.distort;
-    btn.disabled = !(state.shotOk && filesOk);
+    btn.disabled = !(state.shotOk && state.files.undistort && state.files.distort);
+
+    // Don't clobber an active error or success message from the last upload;
+    // it gets cleared the moment the user changes any input.
+    if (status.classList.contains("error") || status.classList.contains("success")) {
+      return;
+    }
+
+    const missing = [];
+    if (!state.shotOk) missing.push("a shot name");
+    if (!state.files.undistort) missing.push("the undistort STMap");
+    if (!state.files.distort) missing.push("the distort STMap");
+    setStatus(missing.length ? `Add ${missing.join(" and ")} to continue.` : "");
   }
 
   shotInput.addEventListener("input", () => {
     state.shotOk = SHOT_RE.test(shotInput.value.trim());
+    clearTransientStatus();
     refresh();
   });
 
@@ -88,6 +106,25 @@
 
   drops.forEach(attachDrop);
 
+  function resetForm() {
+    shotInput.value = "";
+    state.shotOk = false;
+    state.files.undistort = null;
+    state.files.distort = null;
+    drops.forEach((el) => {
+      el.classList.remove("filled");
+      const input = el.querySelector('input[type="file"]');
+      input.value = "";
+      const filenameEl = el.querySelector(".drop-filename");
+      filenameEl.textContent = filenameEl.dataset.empty;
+    });
+    progress.hidden = true;
+    progressFill.style.width = "0%";
+  }
+
+  // Show the initial "what's missing" hint on load.
+  refresh();
+
   function formatBytes(n) {
     if (n < 1024) return `${n} B`;
     if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
@@ -111,16 +148,14 @@
 
     try {
       const blob = await uploadWithProgress(data);
-      progressFill.style.width = "100%";
-      progressLabel.textContent = "Done";
       const zipName = `${shotInput.value.trim()}_AE_mesh_warp_presets.zip`;
       triggerDownload(blob, zipName);
-      setStatus(`Downloaded ${zipName}`, "success");
+      setStatus(`Downloaded ${zipName}. Ready for the next shot.`, "success");
+      resetForm();
     } catch (err) {
       setStatus(err.message || "Export failed.", "error");
       progress.hidden = true;
     } finally {
-      btn.disabled = false;
       refresh();
     }
   });
