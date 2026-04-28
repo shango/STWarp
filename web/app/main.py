@@ -195,6 +195,11 @@ async def export(
             folder_name = preset_dir.name
             for ffx in result.ffx_paths:
                 zf.write(ffx, arcname=f"{folder_name}/{os.path.basename(ffx)}")
+            if result.jsx_path:
+                zf.write(
+                    result.jsx_path,
+                    arcname=f"{folder_name}/{os.path.basename(result.jsx_path)}",
+                )
         buf.seek(0)
 
         zip_name = f"{shot_name}_AE_mesh_warp_presets.zip"

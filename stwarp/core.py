@@ -14,6 +14,8 @@ from typing import Callable, Optional
 
 import numpy as np
 
+from . import aejsx
+
 
 # AE Mesh Warp only supports these grid sizes (matches effect UI dropdown).
 VALID_GRID_RES = (7, 11, 13, 19)
@@ -530,6 +532,7 @@ def write_mesh_warp_ffx(filename: str, grid_res_x: int, grid_res_y: int,
 class ExportResult:
     output_dir: str
     ffx_paths: list[str]
+    jsx_path: Optional[str] = None
 
 
 def export_presets(shot_name: str,
@@ -581,9 +584,19 @@ def export_presets(shot_name: str,
     )
 
     written = []
+    # AE Mesh Warp is a forward warp; STMaps are inverse warps. The
+    # undistort .ffx is built from the redistort STMap, so its size
+    # describes the redistort STMap (the raw plate). The undistort
+    # STMap's size belongs to the undistort .ffx job.
+    stmap_dims: dict[str, tuple[int, int]] = {}
+
     for preset_label, stmap_path in jobs:
         log(f"Reading STMap for {preset_label}: {os.path.basename(stmap_path)}")
         img_w, img_h, pixels = read_stmap_pixels(stmap_path)
+        if stmap_path == undistort_stmap:
+            stmap_dims["undistort"] = (img_w, img_h)
+        else:
+            stmap_dims["distort"] = (img_w, img_h)
 
         ox, oy, min_u, max_u, min_v, max_v = detect_overscan(
             pixels, img_w, img_h, grid_res)
@@ -603,5 +616,23 @@ def export_presets(shot_name: str,
         )
         written.append(ffx_path)
 
+    jsx_path: Optional[str] = None
+    und_dims = stmap_dims.get("undistort")
+    dist_dims = stmap_dims.get("distort")
+    if und_dims and dist_dims:
+        jsx_name = f"{shot_name}_setup.jsx"
+        jsx_path = os.path.join(out_dir, jsx_name)
+        log(f"Writing {jsx_name}")
+        aejsx.write_ae_jsx(
+            jsx_path,
+            shot_name=shot_name,
+            undistort_dims=und_dims,
+            distort_dims=dist_dims,
+            undistort_ffx=f"{shot_name}_undistort.ffx",
+            distort_ffx=f"{shot_name}_distort.ffx",
+            fps=fps,
+        )
+
     log(f"Done. {len(written)} preset(s) written.")
-    return ExportResult(output_dir=out_dir, ffx_paths=written)
+    return ExportResult(
+        output_dir=out_dir, ffx_paths=written, jsx_path=jsx_path)
