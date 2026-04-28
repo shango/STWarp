@@ -52,8 +52,10 @@
 
   function attachDrop(el) {
     const slot = el.dataset.slot;
+    const resSuffix = el.dataset.resSuffix || "";
     const input = el.querySelector('input[type="file"]');
     const filenameEl = el.querySelector(".drop-filename");
+    const resEl = el.querySelector(".drop-resolution");
     const emptyText = filenameEl.dataset.empty;
 
     const onFile = (file) => {
@@ -65,6 +67,24 @@
       state.files[slot] = file;
       filenameEl.textContent = `${file.name} (${formatBytes(file.size)})`;
       el.classList.add("filled");
+      if (resEl) {
+        resEl.hidden = false;
+        resEl.classList.remove("error");
+        resEl.textContent = "Reading resolution…";
+      }
+      readExrResolution(file).then(
+        (dims) => {
+          if (state.files[slot] !== file || !resEl) return;
+          resEl.classList.remove("error");
+          resEl.innerHTML =
+            `<strong>${dims.w}×${dims.h}</strong> — ${escapeHtml(resSuffix)}`;
+        },
+        () => {
+          if (state.files[slot] !== file || !resEl) return;
+          resEl.classList.add("error");
+          resEl.textContent = "Could not read EXR resolution.";
+        },
+      );
       setStatus("");
       refresh();
     };
@@ -117,6 +137,12 @@
       input.value = "";
       const filenameEl = el.querySelector(".drop-filename");
       filenameEl.textContent = filenameEl.dataset.empty;
+      const resEl = el.querySelector(".drop-resolution");
+      if (resEl) {
+        resEl.hidden = true;
+        resEl.textContent = "";
+        resEl.classList.remove("error");
+      }
     });
     progress.hidden = true;
     progressFill.style.width = "0%";
@@ -209,5 +235,79 @@
     a.click();
     a.remove();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, (c) => ({
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      '"': "&quot;",
+      "'": "&#39;",
+    }[c]));
+  }
+
+  // Parse an EXR file's header to extract dataWindow dimensions.
+  // Reads only the first 64KB — orders of magnitude more than any
+  // legitimate header — to keep the operation cheap on large plates.
+  async function readExrResolution(file) {
+    const headerBytes = Math.min(file.size, 64 * 1024);
+    const buf = await file.slice(0, headerBytes).arrayBuffer();
+    const view = new DataView(buf);
+    const bytes = new Uint8Array(buf);
+
+    // Magic: 0x76 0x2f 0x31 0x01
+    if (
+      bytes.length < 8 ||
+      bytes[0] !== 0x76 ||
+      bytes[1] !== 0x2f ||
+      bytes[2] !== 0x31 ||
+      bytes[3] !== 0x01
+    ) {
+      throw new Error("Not an EXR file");
+    }
+
+    let pos = 8; // skip magic + version
+    const findNull = (start) => {
+      for (let i = start; i < bytes.length; i++) {
+        if (bytes[i] === 0) return i;
+      }
+      return -1;
+    };
+    const ascii = (start, end) => {
+      let s = "";
+      for (let i = start; i < end; i++) s += String.fromCharCode(bytes[i]);
+      return s;
+    };
+
+    while (pos < bytes.length) {
+      const nameEnd = findNull(pos);
+      if (nameEnd < 0) throw new Error("Malformed EXR header");
+      const attrName = ascii(pos, nameEnd);
+      pos = nameEnd + 1;
+      if (!attrName) break; // header terminator
+
+      const typeEnd = findNull(pos);
+      if (typeEnd < 0) throw new Error("Malformed EXR header");
+      pos = typeEnd + 1;
+
+      if (pos + 4 > bytes.length) throw new Error("Truncated EXR attribute size");
+      const attrSize = view.getUint32(pos, true);
+      pos += 4;
+      if (pos + attrSize > bytes.length) throw new Error("Truncated EXR attribute");
+
+      if (attrName === "dataWindow" && attrSize >= 16) {
+        const xMin = view.getInt32(pos, true);
+        const yMin = view.getInt32(pos + 4, true);
+        const xMax = view.getInt32(pos + 8, true);
+        const yMax = view.getInt32(pos + 12, true);
+        const w = xMax - xMin + 1;
+        const h = yMax - yMin + 1;
+        if (w <= 0 || h <= 0) throw new Error("Invalid EXR dimensions");
+        return { w, h };
+      }
+      pos += attrSize;
+    }
+    throw new Error("dataWindow not found in EXR header");
   }
 })();

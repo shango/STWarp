@@ -37,7 +37,8 @@
       <section class="section">
         <h2 class="section-title">STMaps</h2>
 
-        <div class="drop" data-slot="undistort">
+        <div class="drop" data-slot="undistort"
+             data-res-suffix="should equal undistorted plate res">
           <input type="file" name="undistort" id="undistort"
                  accept=".exr" required hidden>
           <div class="drop-body">
@@ -48,10 +49,12 @@
             <span class="drop-filename" data-empty="Drop .exr here, or click to browse">
               Drop .exr here, or click to browse
             </span>
+            <span class="drop-resolution" hidden></span>
           </div>
         </div>
 
-        <div class="drop" data-slot="distort">
+        <div class="drop" data-slot="distort"
+             data-res-suffix="should equal raw plate res">
           <input type="file" name="distort" id="distort"
                  accept=".exr" required hidden>
           <div class="drop-body">
@@ -62,6 +65,7 @@
             <span class="drop-filename" data-empty="Drop .exr here, or click to browse">
               Drop .exr here, or click to browse
             </span>
+            <span class="drop-resolution" hidden></span>
           </div>
         </div>
       </section>
